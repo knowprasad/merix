@@ -295,7 +295,7 @@ The backend deploys to [Render](https://render.com) via the included `render.yam
 2. Select **New Blueprint** and let Render sync the configuration.
 3. Provide values for secure environment variables marked `sync: false`:
    - `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET`
-   - `LLM_API_KEY`, `EMBEDDING_API_KEY`
+   - `LLM_API_KEY`, `EMBEDDING_API_KEY`, `ALLOWED_ORIGINS`
 4. Render builds (`pip install uv && uv sync --frozen`) and runs migrations before starting the service.
 5. Verify with a `GET /health` request.
 
