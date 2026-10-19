@@ -94,3 +94,12 @@ async def test_retention_sweep_requires_admin_token_when_configured(client, org_
         headers={**org_a, "X-Admin-Token": "secret-admin-token"},
     )
     assert r.status_code == 200, r.text
+
+
+async def test_retention_sweep_fails_closed_in_production_without_token(client, org_a, monkeypatch):
+    monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    monkeypatch.setattr(settings, "ADMIN_API_TOKEN", "")
+
+    r = client.post("/api/admin/retention-sweep", headers=org_a)
+
+    assert r.status_code == 403, r.text

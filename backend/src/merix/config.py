@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -70,6 +71,30 @@ class Settings(BaseSettings):
         env_file=str(Path(__file__).resolve().parents[2] / ".env"),
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def validate_production_configuration(self) -> "Settings":
+        """Fail closed before a misconfigured production instance serves traffic."""
+        if self.ENVIRONMENT.lower() != "production":
+            return self
+
+        required = {
+            "DATABASE_URL": self.DATABASE_URL,
+            "LLM_API_KEY": self.LLM_API_KEY,
+            "EMBEDDING_API_KEY": self.EMBEDDING_API_KEY,
+            "SUPABASE_URL": self.SUPABASE_URL,
+            "SUPABASE_SERVICE_KEY": self.SUPABASE_SERVICE_KEY,
+            "SUPABASE_JWT_SECRET": self.SUPABASE_JWT_SECRET,
+            "ADMIN_API_TOKEN": self.ADMIN_API_TOKEN,
+        }
+        missing = sorted(name for name, value in required.items() if not value.strip())
+        if missing:
+            raise ValueError(f"Missing production settings: {', '.join(missing)}")
+        if len(self.SUPABASE_JWT_SECRET) < 32:
+            raise ValueError("SUPABASE_JWT_SECRET must be at least 32 characters in production")
+        if self.ALLOWED_ORIGINS.strip() == "*":
+            raise ValueError("ALLOWED_ORIGINS must be explicit in production")
+        return self
 
 
 settings = Settings()

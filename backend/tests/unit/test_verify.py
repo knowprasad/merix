@@ -3,6 +3,7 @@
 import httpx
 import pytest
 
+from merix.core.exceptions import ValidationError
 from merix.services import verify
 
 
@@ -77,6 +78,25 @@ async def test_liveness_network_error_stays_error():
 
     got = await verify.check_liveness(_client(handler), "https://github.com/nx")
     assert got["status"] == "error"
+
+
+async def test_liveness_revalidates_redirect_destinations(monkeypatch):
+    checked_hosts = []
+
+    async def assert_public(host: str) -> None:
+        checked_hosts.append(host)
+        if host == "127.0.0.1":
+            raise ValidationError("private host")
+
+    monkeypatch.setattr(verify, "_assert_public_host", assert_public)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(302, headers={"location": "http://127.0.0.1/internal"})
+
+    got = await verify.check_liveness(_client(handler), "https://github.com/jane-doe")
+
+    assert got["status"] == "skipped"
+    assert checked_hosts == ["github.com", "127.0.0.1"]
 
 
 # --- full resume verification flow ---

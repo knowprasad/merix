@@ -265,18 +265,40 @@ export const api = {
     });
   },
 
-  getExportUrl(jobId: string, minScore?: number): string {
+  async downloadMatchesCsv(jobId: string, minScore?: number): Promise<void> {
     const token = getToken();
     let url = `${getApiBaseUrl()}/jobs/${jobId}/matches/export`;
     const params = new URLSearchParams();
     if (minScore !== undefined) {
       params.set("min_score", String(minScore));
     }
-    if (token) {
-      params.set("token", token);
-    }
     const queryString = params.toString();
-    return queryString ? `${url}?${queryString}` : url;
+    if (queryString) url += `?${queryString}`;
+
+    const headers = new Headers();
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      const text = await response.text();
+      let message = `Request failed with status ${response.status}`;
+      try {
+        const data = JSON.parse(text) as { detail?: string };
+        if (typeof data.detail === "string") message = data.detail;
+      } catch {
+        if (text) message = text;
+      }
+      throw new ApiError(message, response.status);
+    }
+
+    const blob = await response.blob();
+    const downloadUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = downloadUrl;
+    anchor.download = `shortlist_${jobId}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(downloadUrl);
   },
 
   // Candidate erasure (DPDP Right to Erasure)
@@ -297,6 +319,6 @@ export const api = {
   // Audit Logs
   async listAuditLogs(limit?: number): Promise<AuditEvent[]> {
     const query = limit !== undefined ? `?limit=${limit}` : "";
-    return request<AuditEvent[]>(`/audit-logs${query}`);
+    return request<AuditEvent[]>(`/orgs/audit-logs${query}`);
   },
 };

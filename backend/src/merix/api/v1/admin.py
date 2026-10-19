@@ -29,9 +29,12 @@ async def retention_sweep(
 ) -> dict:
     """Trigger the DPDP retention sweep (runs asynchronously).
 
-    When ADMIN_API_TOKEN is configured, callers must additionally present it
-    in the X-Admin-Token header (operator-only trigger).
+    Production always requires a configured operator token. Development and
+    test environments may omit it for local convenience, but once a token is
+    configured callers must present it in the X-Admin-Token header.
     """
+    if settings.ENVIRONMENT.lower() == "production" and not settings.ADMIN_API_TOKEN:
+        raise PermissionError("admin token is not configured")
     if settings.ADMIN_API_TOKEN and x_admin_token != settings.ADMIN_API_TOKEN:
         raise PermissionError("admin token required for retention sweep")
     background_tasks.add_task(_run_retention_sweep)

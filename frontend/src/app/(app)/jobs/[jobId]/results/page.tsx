@@ -57,6 +57,7 @@ function RankedResults() {
   const [selectedMatchIds, setSelectedMatchIds] = useState<Set<string>>(new Set());
   const [bulkStatusPending, setBulkStatusPending] = useState<"shortlisted" | "rejected" | null>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   /* Restore the saved row-density preference once mounted.
      Deferred so the effect body performs no synchronous setState
@@ -143,7 +144,17 @@ function RankedResults() {
     return nameMatch || skillMatch || gapMatch;
   });
 
-  const exportUrl = api.getExportUrl(jobId, minScoreFilter);
+  const handleExport = async () => {
+    setExporting(true);
+    setError(null);
+    try {
+      await api.downloadMatchesCsv(jobId, minScoreFilter);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to export shortlist");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   /* ---- Bulk selection & selected-candidate CSV (client-side) ---- */
   const selectAllRef = useRef<HTMLInputElement>(null);
@@ -322,14 +333,15 @@ function RankedResults() {
               <UploadCloud className="w-3.5 h-3.5" />
               <span>Add More Resumes</span>
             </Link>
-            <a
-              href={exportUrl}
-              download
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] transition-all shadow-xs"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>Export CSV</span>
-            </a>
+              {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />}
+              <span>{exporting ? "Exporting…" : "Export CSV"}</span>
+            </button>
           </div>
         </div>
 

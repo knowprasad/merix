@@ -28,7 +28,7 @@ FastAPI backend for Merix - AI-powered resume-to-job-description matching platfo
 
 4. **Access the API**:
    - API docs: http://localhost:8000/docs
-   - Health check: http://localhost:8000/api/v1/health
+   - Health check: http://localhost:8000/health
 
 ## Project Structure
 
@@ -72,7 +72,7 @@ The backend is configured for deployment on [Render](https://render.com) using `
 - **Runtime**: Python 3.11
 - **Root Directory**: `backend`
 - **Build Command**: `pip install uv && uv sync --frozen`
-- **Start Command**: `uv run uvicorn merix.main:app --host 0.0.0.0 --port $PORT`
+- **Start Command**: `uv run alembic upgrade head && uv run uvicorn merix.main:app --host 0.0.0.0 --port $PORT`
 - **Health Check Path**: `/health`
 
 > **Note on Free Tier**: Render's free instances spin down after 15 minutes of inactivity (~30-60s cold-start). For live demos, send a `GET /health` request 1 minute prior to demo start to warm up the instance.

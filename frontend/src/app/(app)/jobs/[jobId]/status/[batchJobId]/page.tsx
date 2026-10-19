@@ -228,7 +228,7 @@ export default function BatchJobStatusPage() {
                     className="p-3 rounded-xl bg-[var(--bg-subtle)] dark:bg-black/40 border border-[var(--border-hairline)] dark:border-white/5 flex items-center justify-between text-sm font-mono"
                   >
                     <div className="flex items-center gap-2.5 truncate">
-                      {res.status === "matched" ? (
+                      {res.status === "completed" ? (
                         <CheckCircle2 className="w-3.5 h-3.5 text-[var(--accent-evidence)] shrink-0" />
                       ) : (
                         <AlertCircle className="w-3.5 h-3.5 text-[var(--accent-gap)] shrink-0" />
@@ -239,7 +239,7 @@ export default function BatchJobStatusPage() {
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
-                      {res.status === "matched" && res.score !== undefined && (
+                      {res.status === "completed" && res.score !== undefined && (
                         <span
                           className={`px-2 py-0.5 rounded font-bold text-sm border ${
                             res.score >= 80

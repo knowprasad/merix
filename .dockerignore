@@ -1,0 +1,10 @@
+.git
+.github
+.venv
+backend/.venv
+backend/.env
+frontend/node_modules
+frontend/.next
+data
+graphify-out
+*.log

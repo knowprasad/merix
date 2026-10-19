@@ -17,8 +17,7 @@ concurrency:
 # Two tiers:
 #   Fast tier (every push/PR): lint + unit tests + migration drift — ~2 min.
 #   Full tier (push to main / nightly): the DB-backed integration suite,
-#   which takes ~30 min against the shared Supabase dev database and gates
-#   what actually deploys.
+#   running against an ephemeral pgvector container (no shared-DB contention).
 jobs:
   lint:
     name: Lint (ruff)
@@ -87,15 +86,35 @@ jobs:
         run: uv run pytest tests/unit -v --tb=short
 
   integration-tests:
-    name: Integration tests (real Postgres)
+    name: Integration tests (container Postgres)
     runs-on: ubuntu-latest
     needs: [lint, unit-tests]
-    # Slow (~30 min, network-bound to the shared dev database) — only gate
-    # main deploys and the nightly run; branches get the fast tier instead.
+    # Slow-ish, network-independent suite: runs against a fresh ephemeral
+    # pgvector container (provisioned automatically by
+    # tests/integration/conftest.py). Only gates main deploys and the nightly
+    # run; branches get the fast tier instead.
     if: github.event_name == 'schedule' || github.ref == 'refs/heads/main'
     defaults:
       run:
         working-directory: backend
+
+    # Real Postgres + pgvector in a disposable container — exercises the same
+    # RLS/org-isolation behaviour as hosted Postgres without any network or
+    # shared-database contention. Schema is built from scratch each run.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: merix_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
       # Application settings
@@ -104,11 +123,9 @@ jobs:
       DEBUG: "false"
       LOG_LEVEL: WARNING
 
-      # Database — real Supabase instance (pgvector + merix_app role + migrations already applied).
-      # RLS correctness tests (org isolation, scoped_session) require real Postgres behaviour;
-      # a local container would need migrations, the merix_app role, and pgvector installed —
-      # more complexity for no additional correctness. We test against the real dev DB.
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # Ephemeral container database; tests/integration/conftest.py enables
+      # the vector extension and applies all migrations before the suite.
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/merix_test
 
       # LLM/embedding keys — tests use FakeLLM/FakeEmbedder; only empty strings are needed.
       LLM_PROVIDER: groq
@@ -121,12 +138,11 @@ jobs:
       # Storage — not exercised by tests; kept non-empty to satisfy pydantic-settings.
       STORAGE_PROVIDER: supabase
       STORAGE_BUCKET: resumes
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      SUPABASE_URL: ""
 
-      # Auth — tests mint HS256 tokens locally with this secret.
-      # Must match the secret used to sign tokens the app verifies.
-      SUPABASE_JWT_SECRET: ${{ secrets.SUPABASE_JWT_SECRET }}
+      # Auth — tests mint HS256 tokens locally with a test-only secret.
+      # (helpers.py falls back to one when this is empty.)
+      SUPABASE_JWT_SECRET: ""
       JWT_ALGORITHM: HS256
 
       # DPDP / admin
@@ -148,7 +164,7 @@ jobs:
         run: uv sync --group dev
 
       - name: Run pytest
-        run: uv run pytest -v --tb=short 2>&1
+        run: uv run pytest tests/integration -v --tb=short 2>&1
 
   migration-drift:
     name: Migration drift (alembic check)

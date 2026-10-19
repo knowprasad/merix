@@ -2,7 +2,8 @@
 
 import logging
 
-from sqlalchemy import func, select
+from sqlalchemy import text
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from merix.models.interest import InterestSignup
@@ -21,9 +22,10 @@ async def submit(db: AsyncSession, body: InterestRequest) -> dict:
         return {"status": "received"}
 
     normalized = body.email.strip().lower()
-    existing = await db.scalar(select(InterestSignup).where(func.lower(InterestSignup.email) == normalized))
-    if existing is None:
-        db.add(InterestSignup(email=normalized))
-    # Repeat submissions just refresh updated_at via onupdate.
+    # The app role is intentionally INSERT-only for this pre-auth table. Use
+    # the functional unique index as the conflict target instead of probing
+    # first (which would require SELECT and defeat the privacy boundary).
+    statement = insert(InterestSignup).values(email=normalized).on_conflict_do_nothing(index_elements=[text("lower(email)")])
+    await db.execute(statement)
     await db.commit()
     return {"status": "received"}

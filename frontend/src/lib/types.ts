@@ -116,7 +116,7 @@ export interface BatchJob {
   batch_results?: Array<{
     resume_id: string;
     candidate_name?: string;
-    status: "matched" | "failed";
+    status: "completed" | "failed";
     score?: number;
     error?: string;
   }> | null;

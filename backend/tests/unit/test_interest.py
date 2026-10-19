@@ -1,11 +1,11 @@
-"""Unit tests for the interest-signup service (honeypot + upsert logic)."""
+"""Unit tests for the interest-signup service (honeypot + insert-only logic)."""
 
 from unittest.mock import AsyncMock
 
 import pytest
 from pydantic import ValidationError
+from sqlalchemy.dialects.postgresql import dialect
 
-from merix.models.interest import InterestSignup
 from merix.schemas.interest import InterestRequest
 from merix.services import interest
 
@@ -16,26 +16,27 @@ def _body(email: str = "Priya@Example.COM ", website: str = "") -> InterestReque
 
 async def test_email_is_normalised_and_inserted_when_new():
     db = AsyncMock()
-    db.scalar.return_value = None  # no existing lead
 
     result = await interest.submit(db, _body("Priya@Example.COM "))
 
     assert result == {"status": "received"}
-    added = db.add.call_args[0][0]
-    assert isinstance(added, InterestSignup)
-    assert added.email == "priya@example.com"
+    statement = db.execute.call_args.args[0]
+    sql = str(statement.compile(dialect=dialect()))
+    assert "lower(email)" in sql
+    assert "ON CONFLICT" in sql
+    assert statement.compile(dialect=dialect()).params["email"] == "priya@example.com"
+    db.scalar.assert_not_called()
     db.commit.assert_awaited_once()
 
 
-async def test_repeat_submission_updates_instead_of_duplicating():
+async def test_repeat_submission_uses_database_conflict_handling():
     db = AsyncMock()
-    existing = InterestSignup(email="priya@example.com")
-    db.scalar.return_value = existing
 
     result = await interest.submit(db, _body("priya@example.com"))
 
     assert result == {"status": "received"}
-    db.add.assert_not_called()
+    db.execute.assert_awaited_once()
+    db.scalar.assert_not_called()
     db.commit.assert_awaited_once()
 
 
@@ -46,7 +47,7 @@ async def test_honeypot_hit_is_swallowed_without_touching_db():
 
     assert result == {"status": "received"}
     db.scalar.assert_not_called()
-    db.add.assert_not_called()
+    db.execute.assert_not_called()
     db.commit.assert_not_called()
 
 

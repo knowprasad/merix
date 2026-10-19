@@ -44,7 +44,7 @@ Traditional ATS systems are black boxes: they reject resumes with no explanation
 
 **Backend**: FastAPI (async) + PostgreSQL/pgvector (Supabase) + SQLAlchemy 2.0 (async, **env-gated pooling** — `QueuePool` in production, NullPool in dev/test) + Alembic (migrations applied)
 
-**Frontend**: Next.js 15 (App Router) + TypeScript + Tailwind CSS + Framer Motion (in `frontend/`)
+**Frontend**: Next.js 16 (App Router) + TypeScript + Tailwind CSS + Framer Motion (in `frontend/`)
 
 **Status**: Tasks 1–11 complete. **Task 12 (link parsing) complete** — see below. Tasks 1–9 (full production frontend wired to real FastAPI backend, unified design, all 9 screens verified live with 73 passing backend tests) plus **Task 11: Backend performance pass** — async engine connection pooling (env-gated QueuePool in production, NullPool retained in dev/test to avoid pytest-asyncio cross-event-loop issues), async single-resume upload via BatchJob infrastructure (202 + poll), and worker/health-check configuration review.
 
@@ -74,7 +74,17 @@ One-field interest capture for the prototype's "building with early users" story
 - **Backend**: `POST /api/interest` (public, pre-auth) — email-only schema with an invisible honeypot field (non-empty ⇒ silently discarded), slowapi rate limit `5/hour` per IP (`INTEREST_RATE_LIMIT`), service upserts by lowercased email so repeats never duplicate or 409.
 - **Storage**: new `interest_signups` table (id, email case-insensitive unique via `lower(email)` index, source, timestamps). Deliberately INSERT-only for `merix_app`: RLS insert-only policy and **no SELECT grant**, so leads are never readable through the API — only via Supabase service role/dashboard.
 - **Frontend**: `EarlyAccessSection` between FAQ and final CTA — single email input + submit button (zero friction by design), success/error states, wired via `api.submitInterest()`.
+- **Storage**: submissions use PostgreSQL `INSERT ... ON CONFLICT DO NOTHING` so the INSERT-only app role never needs a forbidden SELECT.
 - ⚠️ **Deploy note**: migration `c41f9a7de208` applies automatically on next Render deploy (`alembic upgrade head` in start command); verify `alembic current == heads` against production after deploying.
+
+### Task 19: Reliability, security, and reproducibility pass
+
+- Fixed the staged CI workflow indentation so GitHub Actions parses the two-tier pipeline correctly.
+- Fixed early-access signup against the INSERT-only database grant by using a functional-index conflict-safe insert.
+- Fixed three frontend/backend contract bugs: audit-log path, batch result status (`completed`), and CSV export now uses an authenticated fetch instead of leaking a JWT in the URL.
+- Hardened production startup: missing database/provider/auth/admin settings, short JWT secrets, and wildcard CORS now fail closed; retention sweep cannot be triggered without an admin token in production.
+- Hardened resume-link verification by re-validating every redirect destination against the SSRF public-host guard.
+- Added `.python-version`, `.nvmrc`, root `Makefile`, backend `Dockerfile`, and `.dockerignore`; refreshed setup/CI documentation for reproducible local and container workflows.
 
 
 

@@ -17,7 +17,7 @@ import asyncio
 import logging
 import re
 from datetime import UTC, datetime
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import httpx
 
@@ -30,6 +30,7 @@ VERIFY_TIMEOUT_SECONDS = 5.0
 # Bound concurrent probes: profile hosts (LinkedIn especially) throttle
 # aggressive probing from one IP. Order of results still follows input order.
 VERIFY_PROBE_CONCURRENCY = 4
+MAX_REDIRECTS = 3
 
 # Hosts eligible for liveness checking (boundary-aware suffix match).
 VERIFIABLE_HOST_SUFFIXES = (
@@ -67,10 +68,9 @@ async def check_liveness(client: httpx.AsyncClient, url: str) -> dict:
     """One liveness probe: HEAD first, GET fallback. Never raises."""
     result: dict = {"url": url, "status": "error", "http_status": None, "checked_at": None}
     try:
-        await _assert_public_host(urlparse(url).hostname or "")
-        response = await client.head(url, follow_redirects=True)
+        response = await _safe_request(client, "HEAD", url)
         if response.status_code == 405:  # many sites reject HEAD
-            response = await client.get(url, follow_redirects=True)
+            response = await _safe_request(client, "GET", url)
         result["http_status"] = response.status_code
         if response.status_code < 400:
             result["status"] = "ok"
@@ -80,12 +80,27 @@ async def check_liveness(client: httpx.AsyncClient, url: str) -> dict:
             # 403 bot-walls etc. are inconclusive, not dead.
             result["status"] = "unknown"
     except httpx.HTTPError as exc:
-        logger.info("link_check_failed url=%s error=%s", url, exc)
+        logger.info("link_check_failed host=%s error=%s", urlparse(url).hostname, exc)
     except ValidationError as exc:
-        logger.info("link_check_blocked url=%s error=%s", url, exc)
+        logger.info("link_check_blocked host=%s error=%s", urlparse(url).hostname, exc)
         result["status"] = "skipped"
     result["checked_at"] = datetime.now(tz=UTC).isoformat()
     return result
+
+
+async def _safe_request(client: httpx.AsyncClient, method: str, url: str) -> httpx.Response:
+    """Follow redirects only after re-validating every destination host."""
+    current_url = url
+    for _ in range(MAX_REDIRECTS + 1):
+        await _assert_public_host(urlparse(current_url).hostname or "")
+        response = await client.request(method, current_url, follow_redirects=False)
+        if not response.is_redirect:
+            return response
+        location = response.headers.get("location")
+        if not location:
+            return response
+        current_url = urljoin(current_url, location)
+    raise httpx.TooManyRedirects("too many redirects while verifying resume link")
 
 
 async def check_github_user(client: httpx.AsyncClient, username: str) -> str | None:
@@ -94,7 +109,7 @@ async def check_github_user(client: httpx.AsyncClient, username: str) -> str | N
     Returns 'ok' | 'dead' | 'unknown' (rate-limited or network trouble).
     """
     try:
-        response = await client.get(f"https://api.github.com/users/{username}", follow_redirects=True)
+        response = await _safe_request(client, "GET", f"https://api.github.com/users/{username}")
     except httpx.HTTPError:
         return "unknown"
     if response.status_code == 200:

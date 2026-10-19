@@ -8,7 +8,7 @@
 [![CI](https://github.com/prsdx/merix/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/prsdx/merix/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-async-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 </div>
@@ -84,7 +84,7 @@ The frontend is hosted on Vercel and talks to the FastAPI backend deployed on Re
 - **Observability**: structlog structured logging
 
 ### Frontend
-- **Framework**: Next.js 15 (App Router) + TypeScript + React 18
+- **Framework**: Next.js 16 (App Router) + TypeScript + React 19
 - **Styling**: Tailwind CSS ("Apple Liquid Glass" deep `#050505` palette with frosted glass cards)
 - **Animation**: Framer Motion
 - **Charts**: Recharts
@@ -164,8 +164,8 @@ merix/
 
 ### Prerequisites
 
-- **Python 3.11+**
-- **Node.js 18+** and npm
+- **Python 3.11.10** (see `.python-version`)
+- **Node.js 22.14.0** and npm (see `.nvmrc`)
 - **[uv](https://github.com/astral-sh/uv)** — fast Python package manager
 - A **Supabase** project (PostgreSQL + pgvector + Auth + Storage)
 - API keys for an LLM provider (**Groq**) and an embeddings provider (**Google Gemini**)
@@ -206,7 +206,7 @@ merix/
 
 6. **Verify it's running:**
    - Interactive API docs: <http://localhost:8000/docs>
-   - Health check: <http://localhost:8000/api/v1/health>
+   - Health check: <http://localhost:8000/health>
 
 ### Frontend Setup
 
@@ -262,20 +262,26 @@ Frontend configuration lives in `frontend/.env.local`:
 
 ## 🧪 Testing & Linting
 
-Run the full test suite (64 tests) from `backend/`:
+Run the offline unit-test gate from the repository root:
 
 ```bash
-uv run pytest
+make test
 ```
+
+The integration suite needs PostgreSQL + pgvector; CI provisions an ephemeral
+container for it and runs it on pushes to `main` and nightly. Run it locally
+with `cd backend && uv run pytest tests/integration -v` when a test database is
+available.
 
 Lint and format with Ruff:
 
 ```bash
-uv run ruff check .
-uv run ruff format .
+make lint
+make frontend-lint
 ```
 
-The CI pipeline runs lint + pytest on every push to `main`.
+The CI pipeline runs lint, unit tests, and migration-drift checks on every
+push/PR. The containerized integration suite runs on `main` and nightly.
 
 ---
 
@@ -290,7 +296,7 @@ The backend deploys to [Render](https://render.com) via the included `render.yam
 3. Provide values for secure environment variables marked `sync: false`:
    - `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET`
    - `LLM_API_KEY`, `EMBEDDING_API_KEY`
-4. Render builds (`pip install uv && uv sync --frozen`) and starts the service automatically.
+4. Render builds (`pip install uv && uv sync --frozen`) and runs migrations before starting the service.
 5. Verify with a `GET /health` request.
 
 > ⚠️ On Render's free tier, the service sleeps after 15 minutes of inactivity (~30–60s cold start). Warm it up with a health-check ping before demos.
@@ -307,7 +313,8 @@ The frontend is deployed on [Vercel](https://vercel.com) at **[https://merix-cya
 
 ## 🔌 API Overview
 
-All endpoints are versioned under `/api/v1`. Full interactive docs are served at `/docs` (Swagger UI).
+Application endpoints are mounted under `/api` (the module layout remains
+`api/v1`). Full interactive docs are served at `/docs` (Swagger UI).
 
 | Area | Endpoint | Purpose |
 |---|---|---|
