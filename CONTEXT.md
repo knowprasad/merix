@@ -86,6 +86,14 @@ One-field interest capture for the prototype's "building with early users" story
 - Hardened resume-link verification by re-validating every redirect destination against the SSRF public-host guard.
 - Added `.python-version`, `.nvmrc`, root `Makefile`, backend `Dockerfile`, and `.dockerignore`; refreshed setup/CI documentation for reproducible local and container workflows.
 
+### Task 20: Truthful score explainability + recruiter UI polish
+
+- `MatchComputation` now produces a versioned deterministic `score_breakdown` with required/preferred/experience coverage, exact match counts, adjacent semantic credit, and weighted point contributions.
+- `match_results.score_breakdown` is persisted through a nullable JSONB migration (`8c2a4f6d91b7`), so legacy rows remain readable without fabricated component values. Newly matched rows expose the breakdown through shortlist and dossier responses.
+- Candidate dossier renders the backend values directly with accessible contribution bars and an explicit legacy-row warning when re-matching is needed.
+- Ranked shortlist improvements include clearer empty/error/retry states, exact-vs-adjacent-vs-gap legend, keyboard-accessible expandable evidence rows, stronger focus states, responsive overflow handling, and clearer adjacent-match percentages.
+- Completed batch result entries now include candidate name and score for the processing stream.
+
 
 
 
