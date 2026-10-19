@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
-import { Job, MatchResult, MatchNote, Resume, ResumeLink, LinkVerification } from "@/lib/types";
+import { Job, MatchResult, MatchNote, Resume, ResumeLink, LinkVerification, ScoreBreakdown } from "@/lib/types";
 
 import { DPDPBadge } from "@/components/dpdp-badge";
 import { ScoreRing } from "@/components/score-ring";
@@ -65,6 +65,65 @@ function authorLabel(email: string | null): string {
 
 function formatNoteTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+function ScoreComponentRow({
+  label,
+  maxPoints,
+  contribution,
+  coverage,
+  detail,
+  barClass,
+}: {
+  label: string;
+  maxPoints: number;
+  contribution: number;
+  coverage: number;
+  detail: string;
+  barClass: string;
+}) {
+  const percentage = Math.max(0, Math.min(100, Math.round(coverage * 100)));
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-start justify-between gap-4 font-mono">
+        <div className="min-w-0">
+          <div className="text-sm text-[var(--text-primary)]">{label}</div>
+          <div className="mt-0.5 text-[11px] text-[var(--text-muted)]">{detail}</div>
+        </div>
+        <span className="shrink-0 text-sm font-bold text-[var(--text-primary)]">
+          {contribution.toFixed(1)} / {maxPoints}
+        </span>
+      </div>
+      <div
+        className="h-2.5 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]"
+        role="progressbar"
+        aria-label={`${label} contribution`}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percentage}
+      >
+        <div className={`h-full rounded-full transition-[width] duration-500 ${barClass}`} style={{ width: `${percentage}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function breakdownDetail(breakdown: ScoreBreakdown, kind: "required" | "preferred" | "experience"): string {
+  if (kind === "experience") {
+    const target = breakdown.minimum_experience_years;
+    return target > 0
+      ? `${breakdown.experience_years.toFixed(1)} yrs evidenced · ${target.toFixed(1)} yrs required`
+      : `${breakdown.experience_years.toFixed(1)} yrs evidenced · no minimum specified`;
+  }
+
+  const coverage = kind === "required" ? breakdown.required_coverage : breakdown.preferred_coverage;
+  const exact = kind === "required" ? breakdown.required_exact_matches : breakdown.preferred_exact_matches;
+  const adjacent = kind === "required" ? breakdown.required_adjacent_credit : breakdown.preferred_adjacent_credit;
+  const total = kind === "required" ? breakdown.required_total : breakdown.preferred_total;
+  if (total === 0) return "No qualifications specified";
+  const adjacentText = adjacent > 0 ? ` · ${adjacent.toFixed(2)} adjacent credit` : "";
+  return `${Math.round(coverage * 100)}% coverage · ${exact}/${total} exact${adjacentText}`;
 }
 
 
@@ -201,6 +260,7 @@ export default function CandidateDetailPage() {
   }
 
   const score = match?.score || 0;
+  const breakdown = match?.score_breakdown ?? null;
   const scoreCategory =
     score >= 80
       ? { label: "Strong Match", color: "#16A34A", bg: "rgba(22,163,74,0.12)" }
@@ -258,51 +318,62 @@ export default function CandidateDetailPage() {
                 {scoreCategory.label}
               </div>
 
-              {/* 70/20/10 Breakdown Bars */}
-              <div className="space-y-3 pt-4 border-t border-[var(--border-hairline)] text-left">
-                <div className="text-xs font-mono uppercase tracking-wider text-[var(--text-muted)]">
-                  Deterministic Weight Breakdown
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm font-mono">
-                    <span className="text-[var(--text-primary)]">Required Technical Skills (70%)</span>
-                    <span className="text-[var(--accent-evidence)]  font-bold">
-                      {Math.round((match?.matched_skills.length || 0) > 0 ? (score * 0.7) : 0)} / 70
+              {/* Exact 70/20/10 breakdown returned by the scoring service. */}
+              <div className="space-y-4 border-t border-[var(--border-hairline)] pt-5 text-left">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-mono uppercase tracking-wider text-[var(--text-muted)]">
+                      Score composition
+                    </div>
+                    <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
+                      Fixed weights, deterministic coverage, and fractional credit for clearly labelled adjacent skills.
+                    </p>
+                  </div>
+                  {breakdown && (
+                    <span className="shrink-0 rounded-full border border-[var(--accent-evidence)]/30 bg-[var(--accent-evidence-soft)] px-2 py-1 text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--accent-evidence)]">
+                      Verified v{breakdown.version}
                     </span>
-                  </div>
-                  <div className="w-full bg-[var(--bg-subtle)] h-2 rounded-full overflow-hidden">
-                    <div
-                      className="bg-[var(--accent-evidence)] h-full rounded-full"
-                      style={{ width: `${Math.min(100, (score / 100) * 100)}%` }}
-                    />
-                  </div>
+                  )}
                 </div>
 
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm font-mono">
-                    <span className="text-[var(--text-primary)]">Preferred Qualifications (20%)</span>
-                    <span className="text-amber-700 dark:text-amber-400 font-bold">
-                      {score >= 80 ? "20 / 20" : "10 / 20"}
-                    </span>
-                  </div>
-                  <div className="w-full bg-[var(--bg-subtle)] h-2 rounded-full overflow-hidden">
-                    <div
-                      className="bg-amber-600 dark:bg-amber-400 h-full rounded-full"
-                      style={{ width: score >= 80 ? "100%" : "50%" }}
+                {breakdown ? (
+                  <div className="space-y-4">
+                    <ScoreComponentRow
+                      label="Required skills · 70 pts"
+                      maxPoints={70}
+                      contribution={breakdown.required_contribution}
+                      coverage={breakdown.required_coverage}
+                      detail={breakdownDetail(breakdown, "required")}
+                      barClass="bg-[var(--accent-evidence)]"
                     />
+                    <ScoreComponentRow
+                      label="Preferred qualifications · 20 pts"
+                      maxPoints={20}
+                      contribution={breakdown.preferred_contribution}
+                      coverage={breakdown.preferred_coverage}
+                      detail={breakdownDetail(breakdown, "preferred")}
+                      barClass="bg-amber-500"
+                    />
+                    <ScoreComponentRow
+                      label="Experience · 10 pts"
+                      maxPoints={10}
+                      contribution={breakdown.experience_contribution}
+                      coverage={breakdown.experience_score}
+                      detail={breakdownDetail(breakdown, "experience")}
+                      barClass="bg-[var(--brand-primary)]"
+                    />
+                    <div className="flex items-center justify-between border-t border-[var(--border-hairline)] pt-3 font-mono">
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">Total deterministic score</span>
+                      <span className="text-sm font-bold text-[var(--accent-evidence)]">
+                        {(breakdown.required_contribution + breakdown.preferred_contribution + breakdown.experience_contribution).toFixed(1)} / 100
+                      </span>
+                    </div>
                   </div>
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm font-mono">
-                    <span className="text-[var(--text-primary)]">Experience &amp; Domain (10%)</span>
-                    <span className="text-[var(--accent-evidence)] font-bold">10 / 10</span>
+                ) : (
+                  <div className="rounded-xl border border-[var(--accent-gap-border)] bg-[var(--accent-gap-soft)] p-3 text-sm leading-relaxed text-[var(--accent-gap)]">
+                    This evaluation predates exact score-component storage. Re-run matching to generate a verified breakdown; no component values are estimated here.
                   </div>
-                  <div className="w-full bg-[var(--bg-subtle)] h-2 rounded-full overflow-hidden">
-                    <div className="bg-[var(--accent-evidence)] h-full rounded-full w-full" />
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 

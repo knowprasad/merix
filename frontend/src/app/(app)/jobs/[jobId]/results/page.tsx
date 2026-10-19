@@ -19,11 +19,11 @@ import {
   ChevronUp,
   FileSpreadsheet,
   CheckCircle2,
-  ShieldCheck,
   ExternalLink,
   X,
   BookmarkCheck,
   XCircle,
+  RefreshCw,
 } from "lucide-react";
 
 /* ---- Results table density (persisted locally per browser) ---- */
@@ -268,7 +268,7 @@ function RankedResults() {
 
   if (authLoading || (loading && !job)) {
     return (
-      <div className="min-h-screen flex flex-col justify-center items-center bg-[var(--bg-canvas)]">
+      <div className="min-h-screen flex flex-col justify-center items-center bg-[var(--bg-canvas)]" role="status" aria-live="polite">
         <Loader2 className="w-8 h-8 animate-spin text-[var(--brand-primary)] mb-3" />
         <span className="text-sm text-[var(--text-muted)] font-mono">
           Loading Ranked Shortlist...
@@ -277,18 +277,52 @@ function RankedResults() {
     );
   }
 
+  if (error && !job) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 bg-[var(--bg-canvas)]">
+        <div className="merix-card w-full max-w-lg p-6 sm:p-8 space-y-5" role="alert">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-danger-soft)] text-[var(--accent-danger)]">
+              <AlertCircle className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <div className="space-y-1">
+              <h1 className="font-display text-xl text-[var(--text-primary)]">We couldn&apos;t load this shortlist</h1>
+              <p className="text-sm leading-relaxed text-[var(--text-secondary)]">{error}</p>
+            </div>
+          </div>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center justify-center rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-surface)]"
+            >
+              Back to Pipeline
+            </Link>
+            <button
+              type="button"
+              onClick={loadData}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-surface)]"
+            >
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+              Try again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen pb-16 bg-[var(--bg-canvas)] text-[var(--text-primary)]">
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6" aria-busy={loading}>
         {/* Breadcrumb & Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-[var(--border-hairline)]">
           <div className="space-y-1">
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-canvas)]"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
+              <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Back to Pipeline</span>
             </Link>
             <div className="flex items-center gap-2">
@@ -302,7 +336,7 @@ function RankedResults() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {/* Row-density toggle */}
             <div
               className="hidden sm:flex items-center rounded-xl border border-[var(--border-hairline)] overflow-hidden"
@@ -316,7 +350,7 @@ function RankedResults() {
                   onClick={() => setDensityPref(d)}
                   aria-pressed={density === d}
                   title={d === "comfortable" ? "Comfortable rows" : "Compact rows"}
-                  className={`px-2.5 py-2 text-xs font-semibold font-mono transition-colors cursor-pointer ${
+                  className={`px-2.5 py-2 text-xs font-semibold font-mono transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-inset ${
                     density === d
                       ? "bg-[var(--brand-primary)] text-white"
                       : "bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
@@ -328,18 +362,18 @@ function RankedResults() {
             </div>
             <Link
               href={`/jobs/${jobId}/upload`}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold bg-[var(--bg-subtle)] text-[var(--text-primary)] border border-[var(--border-hairline)] hover:bg-[var(--bg-elevated)] transition-colors"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold bg-[var(--bg-subtle)] text-[var(--text-primary)] border border-[var(--border-hairline)] hover:bg-[var(--bg-elevated)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-canvas)]"
             >
-              <UploadCloud className="w-3.5 h-3.5" />
+              <UploadCloud className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Add More Resumes</span>
             </Link>
             <button
               type="button"
               onClick={handleExport}
               disabled={exporting}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] transition-all shadow-xs"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] transition-all shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-canvas)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5" />}
+              {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> : <FileSpreadsheet className="w-3.5 h-3.5" aria-hidden="true" />}
               <span>{exporting ? "Exporting…" : "Export CSV"}</span>
             </button>
           </div>
@@ -433,7 +467,7 @@ function RankedResults() {
         {/* Filter & Search Bar */}
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 p-3 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-hairline)] shadow-xs">
           {/* Score Threshold Filters */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+          <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0" role="group" aria-label="Filter candidates by score">
             <span className="text-xs font-mono text-[var(--text-muted)] mr-2 shrink-0">
               Filter:
             </span>
@@ -447,8 +481,10 @@ function RankedResults() {
               return (
                 <button
                   key={f.label}
+                  type="button"
                   onClick={() => setMinScoreFilter(f.val)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-mono font-semibold transition-all shrink-0 cursor-pointer ${
+                  aria-pressed={active}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-mono font-semibold transition-all shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-inset ${
                     active
                       ? "bg-[var(--brand-primary)] text-white shadow-xs"
                       : "bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -462,16 +498,44 @@ function RankedResults() {
 
           {/* Search Input */}
           <div className="relative min-w-[220px]">
-            <Search className="w-3.5 h-3.5 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2" />
+            <label htmlFor="shortlist-search" className="sr-only">
+              Search candidates by name or skill
+            </label>
+            <Search className="w-3.5 h-3.5 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
             <input
+              id="shortlist-search"
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search candidate or skill..."
-              className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-hairline)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] transition-colors"
+              className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-hairline)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] transition-colors"
             />
           </div>
         </div>
+
+        <div className="flex flex-wrap items-center gap-2 px-1" aria-label="Match type legend">
+          <span className="text-xs font-mono uppercase tracking-wider text-[var(--text-muted)]">Reading key</span>
+          <span className="tag-evidence text-[10px]">✓ Exact resume evidence</span>
+          <span className="tag-adjacent text-[10px]">≈ Adjacent semantic match</span>
+          <span className="tag-gap text-[10px]">✕ Skill gap</span>
+        </div>
+
+        {error && job && (
+          <div className="flex flex-col gap-3 rounded-xl border border-[var(--accent-danger-border)] bg-[var(--accent-danger-soft)] p-4 text-sm text-[var(--accent-danger)] sm:flex-row sm:items-center sm:justify-between" role="alert">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>{error}</span>
+            </div>
+            <button
+              type="button"
+              onClick={loadData}
+              className="inline-flex items-center justify-center gap-1.5 self-start rounded-lg border border-[var(--accent-danger-border)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-danger)] transition-colors hover:bg-[var(--accent-danger-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-danger)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-canvas)] sm:self-auto"
+            >
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+              Retry
+            </button>
+          </div>
+        )}
 
         {/* Bulk Action Bar (appears while a selection is active) */}
         {selectedMatchIds.size > 0 && (
@@ -486,10 +550,11 @@ function RankedResults() {
               <button
                 onClick={() => applyBulkStatus("shortlisted")}
                 disabled={bulkStatusPending !== null}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold bg-[var(--accent-evidence)] text-white hover:brightness-95 transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                type="button"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold bg-[var(--accent-evidence)] text-white hover:brightness-95 transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-evidence)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-surface)]"
               >
                 {bulkStatusPending === "shortlisted" ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
                 ) : (
                   <BookmarkCheck className="w-3.5 h-3.5" />
                 )}
@@ -498,10 +563,11 @@ function RankedResults() {
               <button
                 onClick={() => applyBulkStatus("rejected")}
                 disabled={bulkStatusPending !== null}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold bg-[var(--accent-danger)] text-white hover:brightness-95 transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                type="button"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold bg-[var(--accent-danger)] text-white hover:brightness-95 transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-danger)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-surface)]"
               >
                 {bulkStatusPending === "rejected" ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
                 ) : (
                   <XCircle className="w-3.5 h-3.5" />
                 )}
@@ -509,16 +575,18 @@ function RankedResults() {
               </button>
               <button
                 onClick={exportSelectedCsv}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] transition-all shadow-xs cursor-pointer"
+                type="button"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold text-white bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] transition-all shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-surface)]"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <FileSpreadsheet className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>Export Selected</span>
               </button>
               <button
                 onClick={() => setSelectedMatchIds(new Set())}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-hairline)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                type="button"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-hairline)] hover:text-[var(--text-primary)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-surface)]"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3.5 h-3.5" aria-hidden="true" />
                 <span>Clear Selection</span>
               </button>
             </div>
@@ -533,44 +601,61 @@ function RankedResults() {
 
         {/* Results Table with Truffle-Style "Why This Matters" Expandable Drawers */}
         {loading ? (
-          <div className="p-12 text-center merix-card space-y-3">
-            <Loader2 className="w-6 h-6 animate-spin text-[var(--brand-primary)] mx-auto" />
+          <div className="p-12 text-center merix-card space-y-3" role="status" aria-live="polite">
+            <Loader2 className="w-6 h-6 animate-spin text-[var(--brand-primary)] mx-auto" aria-hidden="true" />
             <div className="text-sm text-[var(--text-muted)] font-mono">Filtering candidates...</div>
           </div>
         ) : filteredMatches.length === 0 ? (
           <div className="p-12 text-center merix-card space-y-4">
-            <FileText className="w-10 h-10 text-[var(--text-muted)] mx-auto opacity-50" />
+            <FileText className="w-10 h-10 text-[var(--text-muted)] mx-auto opacity-50" aria-hidden="true" />
             <div className="space-y-1">
               <h3 className="text-base font-bold text-[var(--text-primary)]">
-                No candidates found matching this filter
+                {matches.length === 0 && !searchTerm && minScoreFilter === undefined
+                  ? "No ranked candidates yet"
+                  : "No candidates match these filters"}
               </h3>
               <p className="text-sm text-[var(--text-muted)]">
-                Try resetting your score threshold or upload additional candidate resumes.
+                {matches.length === 0 && !searchTerm && minScoreFilter === undefined
+                  ? "Upload candidate resumes to build a shortlist for this job."
+                  : "Try resetting your score threshold or search term to broaden the shortlist."}
               </p>
             </div>
-            <button
-              onClick={() => {
-                setMinScoreFilter(undefined);
-                setSearchTerm("");
-              }}
-              className="px-4 py-2 rounded-xl text-sm font-semibold bg-[var(--brand-primary)] text-white"
-            >
-              Reset Filters
-            </button>
+            {matches.length === 0 && !searchTerm && minScoreFilter === undefined ? (
+              <Link
+                href={`/jobs/${jobId}/upload`}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-surface)]"
+              >
+                <UploadCloud className="h-3.5 w-3.5" aria-hidden="true" />
+                Add resumes
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setMinScoreFilter(undefined);
+                  setSearchTerm("");
+                }}
+                className="px-4 py-2 rounded-xl text-sm font-semibold bg-[var(--brand-primary)] text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-surface)]"
+              >
+                Reset filters
+              </button>
+            )}
           </div>
         ) : (
-          <div className="merix-card overflow-hidden divide-y divide-[var(--border-hairline)] shadow-xs">
+          <div className="merix-card overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <div className="min-w-[760px] divide-y divide-[var(--border-hairline)]">
             {/* Table Header */}
             <div className="px-5 py-3 bg-[var(--bg-subtle)] grid grid-cols-12 text-xs font-mono font-bold uppercase tracking-wider text-[var(--text-muted)]">
               <div className="col-span-1 flex items-center">
-                <input
-                  ref={selectAllRef}
-                  type="checkbox"
-                  checked={allVisibleSelected}
-                  onChange={toggleSelectAll}
-                  aria-label="Select all candidates"
-                  className="w-4 h-4 cursor-pointer accent-[var(--brand-primary)]"
-                />
+                  <input
+                    ref={selectAllRef}
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="Select all candidates"
+                    className="w-4 h-4 cursor-pointer accent-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
+                  />
               </div>
               <div className="col-span-1">Rank</div>
               <div className="col-span-4">Candidate</div>
@@ -595,7 +680,19 @@ function RankedResults() {
                   {/* Row Summary Bar */}
                   <div
                     onClick={() => setExpandedMatchId(isExpanded ? null : m.id)}
-                    className={`px-5 ${rowPad} grid grid-cols-12 items-center gap-2 cursor-pointer select-none`}
+                    onKeyDown={(event) => {
+                      if (event.target !== event.currentTarget) return;
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setExpandedMatchId(isExpanded ? null : m.id);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isExpanded}
+                    aria-controls={`evidence-drawer-${m.id}`}
+                    aria-label={`${m.candidate_name || "Applicant"} shortlist row. ${isExpanded ? "Collapse" : "Expand"} evidence.`}
+                    className={`px-5 ${rowPad} grid grid-cols-12 items-center gap-2 cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-inset`}
                   >
                     {/* Bulk Selection */}
                     <div className="col-span-1 flex items-center">
@@ -604,8 +701,9 @@ function RankedResults() {
                         checked={selectedMatchIds.has(m.id)}
                         onChange={() => toggleMatchSelection(m.id)}
                         onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
                         aria-label={`Select ${m.candidate_name || "candidate"}`}
-                        className="w-4 h-4 cursor-pointer accent-[var(--brand-primary)]"
+                        className="w-4 h-4 cursor-pointer accent-[var(--brand-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
                       />
                     </div>
 
@@ -644,8 +742,8 @@ function RankedResults() {
                     <div className="col-span-3 flex flex-wrap gap-1 pr-2">
                       {m.matched_skills.slice(0, 3).map((sk) =>
                         sk.match_type === "adjacent" ? (
-                          <span key={sk.skill} className="tag-adjacent text-[10px]" title={`Adjacent match for "${sk.similar_to}" (${Math.round((sk.similarity ?? 0) * 100)}% similar)`}>
-                            ≈ {sk.skill}
+                            <span key={sk.skill} className="tag-adjacent text-[10px]" title={`Adjacent match for "${sk.similar_to}" (${Math.round((sk.similarity ?? 0) * 100)}% similar)`}>
+                            ≈ {sk.skill} · {Math.round((sk.similarity ?? 0) * 100)}%
                           </span>
                         ) : (
                           <span key={sk.skill} className="tag-evidence text-[10px]">
@@ -677,7 +775,7 @@ function RankedResults() {
 
                   {/* Truffle-Style "Why This Matters" Expandable Evidence Drawer */}
                   {isExpanded && (
-                    <div className="px-6 py-5 bg-[var(--bg-subtle)] border-t border-[var(--border-hairline)] space-y-4">
+                    <div id={`evidence-drawer-${m.id}`} className="px-6 py-5 bg-[var(--bg-subtle)] border-t border-[var(--border-hairline)] space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                         {/* Left: AI Rationale & Quote */}
                         <div className="md:col-span-8 space-y-3">
@@ -733,10 +831,10 @@ function RankedResults() {
                           <div className="space-y-2">
                             <Link
                               href={`/jobs/${jobId}/candidates/${m.id}`}
-                              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-hover)] transition-colors"
+                              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-surface)]"
                             >
                               <span>Open Candidate Dossier</span>
-                              <ExternalLink className="w-3.5 h-3.5" />
+                              <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
                             </Link>
                           </div>
                         </div>
@@ -746,6 +844,8 @@ function RankedResults() {
                 </div>
               );
             })}
+              </div>
+            </div>
           </div>
         )}
       </main>
@@ -759,7 +859,7 @@ export default function RankedResultsPage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex flex-col justify-center items-center bg-[var(--bg-canvas)]">
-          <Loader2 className="w-8 h-8 animate-spin text-[var(--brand-primary)] mb-3" />
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--brand-primary)] mb-3" aria-hidden="true" />
           <span className="text-sm text-[var(--text-muted)] font-mono">Loading Ranked Shortlist...</span>
         </div>
       }

@@ -143,12 +143,31 @@ export interface MissingSkill {
   required: boolean;
 }
 
+export interface ScoreBreakdown {
+  version: number;
+  required_coverage: number;
+  preferred_coverage: number;
+  experience_score: number;
+  required_contribution: number;
+  preferred_contribution: number;
+  experience_contribution: number;
+  required_exact_matches: number;
+  preferred_exact_matches: number;
+  required_adjacent_credit: number;
+  preferred_adjacent_credit: number;
+  required_total: number;
+  preferred_total: number;
+  experience_years: number;
+  minimum_experience_years: number;
+}
+
 export interface MatchResult {
   id: string;
   job_id: string;
   resume_id: string;
   candidate_name?: string | null;
   score: number;
+  score_breakdown?: ScoreBreakdown | null;
   matched_skills: MatchedSkill[];
   missing_skills: MissingSkill[];
   rationale: string;
