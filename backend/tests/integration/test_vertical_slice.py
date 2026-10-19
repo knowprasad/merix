@@ -90,12 +90,16 @@ async def test_vertical_slice_end_to_end(client, org_a):
     shortlist = r.json()
     assert shortlist["count"] == 1
     assert shortlist["results"][0]["candidate_name"] == "Jane Doe"
+    assert shortlist["results"][0]["score_breakdown"]["version"] == 1
+    assert shortlist["results"][0]["score_breakdown"]["required_contribution"] == 70.0
+    assert shortlist["results"][0]["score_breakdown"]["experience_years"] == 3.0
 
     # 5. get single match by id
     match_id = shortlist["results"][0]["id"]
     r = client.get(f"/api/matches/{match_id}", headers=headers)
     assert r.status_code == 200, r.text
     assert r.json()["id"] == match_id
+    assert r.json()["score_breakdown"]["preferred_coverage"] == 1.0
 
 
 async def test_upload_rejects_non_pdf(client, org_a):

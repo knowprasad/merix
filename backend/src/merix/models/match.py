@@ -57,6 +57,10 @@ class MatchResult(Base, TimestampMixin):
     matched_skills: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
     missing_skills: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
 
+    # Deterministic score components used by the recruiter-facing breakdown.
+    # Nullable so rows created before this field was introduced remain readable.
+    score_breakdown: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+
     # Short human-readable explanation of the score.
     rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
 

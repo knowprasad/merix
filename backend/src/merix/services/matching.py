@@ -126,6 +126,7 @@ class MatchComputation:
     matched_skills: list[dict] = field(default_factory=list)
     missing_skills: list[dict] = field(default_factory=list)
     rationale: str = ""
+    score_breakdown: dict = field(default_factory=dict)
 
 
 async def extract_jd(llm: LLMClient, jd_text: str) -> dict:
@@ -337,12 +338,34 @@ async def compute_match(
     preferred_coverage = ((matched_preferred + adjacent_preferred_credit) / len(preferred)) if preferred else 1.0
     experience_score = min(exp_years / min_exp, 1.0) if min_exp > 0 else 1.0
 
-    score = 100.0 * (W_REQUIRED * required_coverage + W_PREFERRED * preferred_coverage + W_EXPERIENCE * experience_score)
+    # Round the displayed components first, then derive the displayed total
+    # from those same components so the dossier always reconciles to /100.
+    required_contribution = round(100.0 * W_REQUIRED * required_coverage, 1)
+    preferred_contribution = round(100.0 * W_PREFERRED * preferred_coverage, 1)
+    experience_contribution = round(100.0 * W_EXPERIENCE * experience_score, 1)
+    score = round(required_contribution + preferred_contribution + experience_contribution, 1)
 
     return MatchComputation(
-        score=round(score, 1),
+        score=score,
         matched_skills=matched,
         missing_skills=missing,
+        score_breakdown={
+            "version": 1,
+            "required_coverage": round(required_coverage, 4),
+            "preferred_coverage": round(preferred_coverage, 4),
+            "experience_score": round(experience_score, 4),
+            "required_contribution": required_contribution,
+            "preferred_contribution": preferred_contribution,
+            "experience_contribution": experience_contribution,
+            "required_exact_matches": matched_required,
+            "preferred_exact_matches": matched_preferred,
+            "required_adjacent_credit": round(adjacent_required_credit, 4),
+            "preferred_adjacent_credit": round(adjacent_preferred_credit, 4),
+            "required_total": len(required),
+            "preferred_total": len(preferred),
+            "experience_years": round(exp_years, 2),
+            "minimum_experience_years": round(min_exp, 2),
+        },
     )
 
 

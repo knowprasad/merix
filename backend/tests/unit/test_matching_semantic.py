@@ -85,6 +85,9 @@ async def test_adjacent_skill_surfaces_instead_of_missing():
         100.0 * (matching.W_REQUIRED * entry["similarity"] + matching.W_PREFERRED * 1.0 + matching.W_EXPERIENCE * 1.0), 1
     )
     assert mc.score == expected_score
+    assert mc.score_breakdown["required_adjacent_credit"] == entry["similarity"]
+    assert mc.score_breakdown["required_coverage"] == entry["similarity"]
+    assert mc.score_breakdown["required_contribution"] == round(70 * entry["similarity"], 1)
 
 
 async def test_unrelated_skills_stay_missing():

@@ -129,12 +129,15 @@ async def run_batch_match_background(
                 existing.score = comp.score
                 existing.matched_skills = comp.matched_skills
                 existing.missing_skills = comp.missing_skills
+                existing.score_breakdown = comp.score_breakdown
                 existing.rationale = rationale
                 succeeded += 1
                 batch_results.append(
                     {
                         "resume_id": str(resume.id),
+                        "candidate_name": resume.candidate_name,
                         "status": "completed",
+                        "score": comp.score,
                         "error": None,
                     }
                 )

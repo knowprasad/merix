@@ -47,6 +47,26 @@ class MissingSkill(BaseModel):
     required: bool = True
 
 
+class ScoreBreakdown(BaseModel):
+    """Exact deterministic score components shown to recruiters."""
+
+    version: int = 1
+    required_coverage: float = Field(ge=0, le=1)
+    preferred_coverage: float = Field(ge=0, le=1)
+    experience_score: float = Field(ge=0, le=1)
+    required_contribution: float = Field(ge=0, le=70)
+    preferred_contribution: float = Field(ge=0, le=20)
+    experience_contribution: float = Field(ge=0, le=10)
+    required_exact_matches: int = Field(ge=0)
+    preferred_exact_matches: int = Field(ge=0)
+    required_adjacent_credit: float = Field(ge=0)
+    preferred_adjacent_credit: float = Field(ge=0)
+    required_total: int = Field(ge=0)
+    preferred_total: int = Field(ge=0)
+    experience_years: float = Field(ge=0)
+    minimum_experience_years: float = Field(ge=0)
+
+
 class MatchResponse(BaseModel):
     """An explainable match result."""
 
@@ -55,6 +75,7 @@ class MatchResponse(BaseModel):
     resume_id: uuid.UUID
     candidate_name: str | None = None
     score: float
+    score_breakdown: ScoreBreakdown | None = None
     matched_skills: list[MatchedSkill]
     missing_skills: list[MissingSkill]
     rationale: str | None = None

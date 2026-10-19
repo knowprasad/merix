@@ -43,6 +43,23 @@ async def test_compute_match_full_match():
     assert mc.score == 100.0
     assert len(mc.matched_skills) == 3
     assert mc.missing_skills == []
+    assert mc.score_breakdown == {
+        "version": 1,
+        "required_coverage": 1.0,
+        "preferred_coverage": 1.0,
+        "experience_score": 1.0,
+        "required_contribution": 70.0,
+        "preferred_contribution": 20.0,
+        "experience_contribution": 10.0,
+        "required_exact_matches": 2,
+        "preferred_exact_matches": 1,
+        "required_adjacent_credit": 0.0,
+        "preferred_adjacent_credit": 0.0,
+        "required_total": 2,
+        "preferred_total": 1,
+        "experience_years": 4.0,
+        "minimum_experience_years": 3.0,
+    }
 
 
 async def test_compute_match_partial():
@@ -53,6 +70,9 @@ async def test_compute_match_partial():
     expected = round(100 * (0.70 * (1 / 3) + 0.20 * 1.0 + 0.10 * 0.4), 1)
     assert mc.score == expected
     assert {m["skill"] for m in mc.missing_skills} == {"sql", "docker"}
+    assert mc.score_breakdown["required_coverage"] == round(1 / 3, 4)
+    assert mc.score_breakdown["required_contribution"] == round(70 * (1 / 3), 1)
+    assert mc.score_breakdown["experience_contribution"] == 4.0
 
 
 async def test_compute_match_case_insensitive_and_evidence():

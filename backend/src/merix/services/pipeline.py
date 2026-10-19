@@ -121,6 +121,7 @@ async def run_match_for_resume(
     existing.score = comp.score
     existing.matched_skills = comp.matched_skills
     existing.missing_skills = comp.missing_skills
+    existing.score_breakdown = comp.score_breakdown
     existing.rationale = rationale
     await db.commit()
     await db.refresh(existing)
@@ -181,6 +182,7 @@ def to_match_response(match: MatchResult, candidate_name: str | None) -> dict:
             "score": match.score,
             "matched_skills": match.matched_skills,
             "missing_skills": match.missing_skills,
+            "score_breakdown": match.score_breakdown,
             "rationale": match.rationale,
             "status": match.status,
             "created_at": match.created_at,
