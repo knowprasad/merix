@@ -434,6 +434,7 @@ class TestTotalFailureSurfacesAsFailed:
             uuid.UUID(job_id),
             uuid.UUID(batch_job_id),
             llm=AlwaysFailsLLM(),
+            embedder=FakeEmbedder(),
         )
 
         r = client.get(f"/api/batch-jobs/{batch_job_id}", headers=headers)

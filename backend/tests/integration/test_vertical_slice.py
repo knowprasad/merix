@@ -99,7 +99,8 @@ async def test_vertical_slice_end_to_end(client, org_a):
     r = client.get(f"/api/matches/{match_id}", headers=headers)
     assert r.status_code == 200, r.text
     assert r.json()["id"] == match_id
-    assert r.json()["score_breakdown"]["preferred_coverage"] == 1.0
+    assert r.json()["score_breakdown"]["required_coverage"] == 1.0
+    assert r.json()["score_breakdown"]["preferred_coverage"] == 0.0
 
 
 async def test_upload_rejects_non_pdf(client, org_a):
